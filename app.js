@@ -1,9 +1,21 @@
 import express, { json } from "express";
 const app = express();
+import cors from "cors";
+app.use(cors());
 import DB from "./config/database.js";
+import dotenv from "dotenv";
+dotenv.config();
+
 
 app.use(json());
 DB.testConnection();
+
+function validateRequest(req, res, next) {
+  if(req.headers.authorization!==process.env.API_KEY){
+    return res.status(403).json({ error: "Forbidden: Invalid API key" });
+  }
+  next();
+}
 
 async function main() {
   try {
@@ -43,7 +55,7 @@ async function main() {
 main();
  
 // API Routes
-app.get("/api/students", async (req, res) => {
+app.get("/api/students", validateRequest, async (req, res) => {
   try {
     const [rows] = await DB.pool.query("SELECT * FROM students");
     res.json(rows);
@@ -52,8 +64,8 @@ app.get("/api/students", async (req, res) => {
     res.status(500).send("Server error");
   }
 });
- 
-app.post("/api/students", async (req, res) => {
+
+app.post("/api/students", validateRequest, async (req, res) => {
   try {
     const { name, age, grade } = req.body;
     const [result] = await DB.pool.query(
